@@ -1,0 +1,40 @@
+[Unit]
+Description=Valheim Start Timer
+
+[Timer]
+Unit=.service
+OnCalendar=
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+[Unit]
+Description=valheim Start Timer
+
+[Timer]
+Unit=.service
+OnCalendar=
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+[Unit]
+Description=valheim Start Timer
+
+[Timer]
+Unit=.service
+OnCalendar=
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+[Unit]
+Description=valheim Start Timer
+
+[Timer]
+Unit=.service
+OnCalendar=
+Persistent=true
+
+[Install]
+WantedBy=timers.target
