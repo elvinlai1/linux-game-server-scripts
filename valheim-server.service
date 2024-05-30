@@ -1,0 +1,10 @@
+[Unit]
+Description=valheim Server
+
+[Service]
+ExecStart=/bin/bash /home/steam/valheimserver/valheim.sh
+User=steam
+WorkingDirectory=/home/steam/valheimserver
+
+[Install]
+WantedBy=multi-user.target

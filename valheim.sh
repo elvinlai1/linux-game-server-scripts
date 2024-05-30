@@ -1,86 +1,61 @@
-#!/bin/sh
-if [ $(id -u) = 0 ]; then
-    echo "Please run as root"
-    exit 1
-fi
+#!/bin/bash
+root_check() {
+  if [[ "$(id -u)" -ne 0 || $(ps -o comm= -p $PPID) == "sudo" ]]; then
+    clear
+    msg_error "Please run this script as root."
+    echo -e "\nExiting..."
+    sleep 2
+    exit
+  fi
+}
 
+#One stop shop for all the named services
 server_name="valheim"
+start_service_file="$server_name-server.service"
+shutdown_service_file="$server_name-server-shutdown.service"
+start_timer_file="$server_name-server-start.timer"
+stop_timer_file="$server_name-server-stop.timer"
 
-echo "\nCreating $server_name Service Files:"
-echo "- Main Service File"
-echo "- Daily Shutdown Service"
-echo "- Daily Start Timer"
-echo "- Stop Timer"
-echo
+service_files=(
+    "$start_service_file" 
+    "$shutdown_service_file" 
+    "$start_timer_file" 
+    "$stop_timer_file"
+    )
 
-create_start_service() {
-if [ -s "$server_name-server.service" ]; then
-    echo "$server_name Service File Exists"
-    echo "> Removing $server_name Service\n"
-    rm $server_name-server.service
-fi
-
-service_template="$(cat <<-EOF
+service_start_template="$(cat <<-EOF
 [Unit]
 Description=$server_name Server
 
 [Service]
-ExecStart=/home/steam/$server_name/start_server.sh
+ExecStart=/bin/bash /home/steam/valheimserver/valheim.sh
 User=steam
-Group=steam
-Restart=always
-RestartSec=5
+WorkingDirectory=/home/steam/valheimserver
+
+[Install]
+WantedBy=multi-user.target
 EOF
 )"
 
-touch $server_name-server.service
-echo "$service_template" >> $server_name-server.service
 
-}
-
-create_shutdown_service(){ 
-
-if [ -s "$server_name-shutdown.service" ]; then
-    echo "$server_name Shutdown Service File Exists"
-    echo "> Removing $server_name Shutdown Service\n"
-    rm $server_name-shutdown.service
-fi
-
-shutdown_template="$(cat <<-EOF
+service_shutdown_template="$(cat <<-EOF
 [Unit]
-Description=Shutdown Palworld 
+Description=Shutdown $server_name-server Shutdown Service 
 
 [Service]
-ExecStart=systemctl stop palserver
-User=root
-Group=root
+ExecStart=systemctl stop $server_name-server
+User=steam
 EOF
 )"
 
-touch $server_name-shutdown.service
-echo "$shutdown_template" >> $server_name-shutdown.service
-
-}
-
-create_start_timer() {
-
-if [ -s "$server_name-start.timer" ]; then
-    echo "$server_name Start Timer File Exists"
-    echo "> Removing $server_name Start Timer\n"
-    rm $server_name-start.timer
-fi 
- 
-timer_description="$server_name Start Timer"
-timer_unit="$server_name_server.service"
 timer_start_calendar="*-*-* 09:00:00"
-
-timer_template="$(cat <<-EOF
+timer_start_template="$(cat <<-EOF
 [Unit]
-Description=$timer_description
+Description=$server_name Start Timer
 
 [Timer]
-Unit=$timer_unit
-OnCalendar=$timer_calendar
+Unit=$server_name-server.service
+OnCalendar=$timer_start_calendar
 Persistent=true
 
 [Install]
@@ -88,30 +63,14 @@ WantedBy=timers.target
 EOF
 )"
 
-touch $server_name-start.timer
-echo "$timer_template" >> $server_name-start.timer
-
-}
-
-create_stop_timer() { 
-
-if [ -s "$server_name-stop.timer" ]; then
-    echo "$server_name Stop Timer File Exists"
-    echo "> Removing $server_name Stop Timer\n"
-    rm $server_name-stop.timer
-fi 
-
-timer_description="$server_name Start Timer"
-timer_unit="$server_name-server.service"
 timer_stop_calendar="*-*-* 09:00:00"
-
-timer_template="$(cat <<-EOF
+timer_stop_template="$(cat <<-EOF
 [Unit]
-Description=$timer_description
+Description=$timer_description Stop Timer
 
 [Timer]
-Unit=$timer_unit
-OnCalendar=$timer_calendar
+Unit=$server_name-server-server-shutdown.service
+OnCalendar=$timer_stop_calendar
 Persistent=true
 
 [Install]
@@ -119,12 +78,60 @@ WantedBy=timers.target
 EOF
 )"
 
-touch $server_name-stop.timer
-echo "$timer_template" >> $server_name-stop.timer
+#--------------------------------------
+echo $'\nCreating '$server_name' Service Files:'
+echo "- Server Service"
+echo "- Shutdown Service"
+echo "- Daily Start Timer"
+echo "- Daily Stop Timer"
+echo
+#--------------------------------------
 
+check_if_service_file_exist(){
+    for file in ${service_files[@]}; do
+        if [ -s "$file" ]; then
+            echo "$file already exists"
+        fi
+    done
 }
 
-create_start_service
-create_shutdown_service
-create_start_timer
-create_stop_timer
+
+create_file(){
+    touch $1
+    echo "$2" >> $1
+}
+
+
+check_if_service_file_exist "${service_files[@]}"
+rm -f ${service_files[@]}
+
+
+echo -e "\nCreating New Service Files...\n"
+create_file "$start_service_file" "$service_start_template"
+create_file "$shutdown_service_file" "$shutdown_service_template"
+create_file "$start_timer_file" "$start_timer_template"
+create_file "$stop_timer_file" "$stop_timer_template"
+
+
+# echo -e "\nEnabling Services...\n"
+
+# systemctl enable $start_service_file
+# # systemctl enable $shutdown_service_file
+# # systemctl enable $start_timer_file
+# # systemctl enable $stop_timer_file
+
+# echo -e "\nStarting Services...\n"
+
+# systemctl start $start_service_file
+# # systemctl start $shutdown_service_file
+# # systemctl start $start_timer_file
+# # systemctl start $stop_timer_file
+
+# echo -e "\nStatus of Services...\n"
+
+# systemctl status $start_service_file
+# # systemctl status $shutdown_service_file
+# # systemctl status $start_timer_file
+# # systemctl status $stop_timer_file
+
+# echo -e "\nDone!\n"
