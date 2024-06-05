@@ -1,0 +1,24 @@
+name: valheim_server
+
+config: 
+  core.https_address: ""
+  core.trust_password: ""
+  images.auto_update_interval: 12
+
+networks:
+  - config:
+      ipv4.address: auto
+      ipv6.address: none
+    description: ""
+    name: ext0
+    type: macvlan
+
+storage_pools:
+  - config: {}
+    description: ""
+    name: default
+    driver: zfs
+
+storage_volumes:
+  - name: valheim_server
+    pool: default
